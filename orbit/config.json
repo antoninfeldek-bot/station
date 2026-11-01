@@ -11,12 +11,6 @@
  "day": 1,
  "instagram": "https://www.instagram.com/the.orbit.station/",
  "handle": "@the.orbit.station",
- "flags": [
-  "🇺🇸",
-  "⭐",
-  "🌍",
-  "🚀"
- ],
  "t": {
   "day": "DAY",
   "crew": "CREW",
@@ -31,7 +25,6 @@
   "cabinHint": "Customize your astronaut:",
   "suit": "Suit",
   "visor": "Visor",
-  "flag": "Flag",
   "download": "Download card",
   "share": "Share",
   "copied": "Copied ✓",
@@ -54,28 +47,7 @@
   "claim": "🚀 It's me, claim it",
   "remove": "🗑 Remove (admin)",
   "sync": "Sync Instagram (admin)",
-  "boarding": "Boarding…"
- },
- "flagColors": [
-  [
-   "#b22234",
-   "#ffffff",
-   "#3c3b6e"
-  ],
-  [
-   "#ffd166",
-   "#ffd166",
-   "#ffd166"
-  ],
-  [
-   "#3fae7a",
-   "#2350c4",
-   "#3fae7a"
-  ],
-  [
-   "#ff6fd8",
-   "#ffffff",
-   "#5fe0d0"
-  ]
- ]
+  "boarding": "Boarding…",
+  "banned": "This name can't board the station."
+ }
 }

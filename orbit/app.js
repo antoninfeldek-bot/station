@@ -32,7 +32,9 @@ async function api(method, body, extra = ''){
   const j = await r.json().catch(() => ({ error: 'server' })); if(!r.ok && !j.error) j.error = 'server'; return j;
 }
 try { const j = await api('GET'); if(Array.isArray(j.members)){ crew.online = true; crew.followers = j.followers; j.members.forEach(addMember); } } catch(e){}
-if(ADMIN && crew.online){ try { const j = await api('POST', { action: 'admin' }, '?admin=' + encodeURIComponent(ADMIN)); if(!j.ok){ ADMIN = null; store.del('admin'); } } catch(e){} }
+let ADMINDATA = null;
+async function loadAdmin(){ try { const j = await api('GET', null, '?admin=' + encodeURIComponent(ADMIN)); if(j.admin) ADMINDATA = j.admin; else { ADMIN = null; store.del('admin'); } } catch(e){} }
+if(ADMIN && crew.online) await loadAdmin();
 const maxN = () => crew.list.reduce((a, m) => Math.max(a, m.n), 0);
 
 // ---------- texts ----------
@@ -56,7 +58,7 @@ $('#modalNote').textContent = T.note;
 $('#suitL').textContent = T.suit; $('#visorL').textContent = T.visor;
 $('#dl').textContent = T.download; $('#share').textContent = T.share; $('#close').textContent = T.back;
 $('#next').textContent = T.nextRocket;
-$('#claim').textContent = T.claim; $('#rm').textContent = T.remove; $('#syncBtn').textContent = T.sync;
+$('#claim').textContent = T.claim; $('#rm').textContent = '🗑 Vyhodit (admin)'; $('#syncBtn').textContent = '🔄 Načíst Instagram (admin)';
 updateHud();
 
 // ---------- main 3D ----------
@@ -162,7 +164,7 @@ async function board(h){
   let j; try { j = await api('POST', { action: 'join', h, l: look }, ADMIN ? '?admin=' + encodeURIComponent(ADMIN) : ''); } catch(e){ j = { error: 'offline' }; }
   boarding = false;
   if(j.error === 'taken'){ const m = addMember(j.member); msg(T.taken.replace('{h}', '@' + h)); setTimeout(() => openCabin(m), 900); return; }
-  if(j.error){ msg(j.error === 'limit' ? T.limit : j.error === 'bad_name' ? T.badName : T.offline); return; }
+  if(j.error){ msg(j.error === 'banned' ? T.banned : j.error === 'limit' ? T.limit : j.error === 'bad_name' ? T.badName : T.offline); return; }
   const m = addMember(j.member); store.set('key:' + m.h, j.key); store.set('me', m.h);
   updateHud();
   if(m.n > S.pods.length) build(); else { occupy(); makeDecor(); }
@@ -170,6 +172,34 @@ async function board(h){
   openCabin(m, { welcome: true, delay: 3200 });
 }
 function defaultLookFor(h){ let x = 2166136261; for(const c of h){ x ^= c.charCodeAt(0); x = Math.imul(x, 16777619); } x >>>= 0; return { suit: SUITS[x % SUITS.length], visor: VISORS[(x >>> 3) % VISORS.length], flag: (x >>> 6) % 4 }; }
+
+// ---------- admin panel ----------
+async function kick(h){
+  if(!confirm('Vyhodit @' + h + ' ze stanice?')) return false;
+  const j = await api('DELETE', null, `?h=${encodeURIComponent(h)}&admin=${encodeURIComponent(ADMIN)}`);
+  if(j.error){ alert('Nepovedlo se: ' + j.error); return false; }
+  const m = crew.by.get(h); if(m){ crew.list = crew.list.filter(x => x !== m); crew.by.delete(h); }
+  if(ADMINDATA && !ADMINDATA.banned.includes(h)) ADMINDATA.banned.push(h);
+  occupy(); makeDecor(); updateHud(); return true;
+}
+function renderAdmin(){
+  const q = clean($('#admQ').value); const info = ADMINDATA?.info || {};
+  const list = [...crew.list].sort((a, b) => b.n - a.n).filter(m => !q || m.h.includes(q)).slice(0, 300);
+  $('#admCount').textContent = `(${crew.list.length} na palubě)`;
+  const src = m => { const i = info[m.h]; if(!i) return ''; return (i[0] === 'ig' ? '💬 komentář' : '🌐 web') + (i[0] === 'ig' && !i[2] ? '' : ''); };
+  let html = list.map(m => `<div class="arow"><div style="flex:1;min-width:0"><b style="display:block">@${esc(m.h)}</b><span class="src">${CFG.prefix}-${String(m.n).padStart(4,'0')} · ${src(m)}</span></div><a href="https://www.instagram.com/${encodeURIComponent(m.h)}/" target="_blank" rel="noopener">IG ↗</a><button data-kick="${esc(m.h)}">Vyhodit</button></div>`).join('');
+  const banned = (ADMINDATA?.banned || []).filter(h => !q || h.includes(q));
+  if(banned.length) html += `<h4>VYHOZENÍ</h4>` + banned.map(h => `<div class="arow"><b>@${esc(h)}</b><button class="ok" data-unban="${esc(h)}">Vrátit</button></div>`).join('');
+  $('#admList').innerHTML = html || '<div class="note">Nikdo.</div>';
+}
+$('#admList').addEventListener('click', async e => { const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.kick){ if(await kick(b.dataset.kick)) renderAdmin(); }
+  if(b.dataset.unban){ const h = b.dataset.unban; await api('POST', { action: 'unban', h }, '?admin=' + encodeURIComponent(ADMIN)); ADMINDATA.banned = ADMINDATA.banned.filter(x => x !== h); renderAdmin(); } });
+$('#admQ').addEventListener('input', renderAdmin);
+$('#adminBtn').onclick = async () => { await loadAdmin(); renderAdmin(); $('#adminModal').classList.add('open'); };
+$('#admClose').onclick = () => $('#adminModal').classList.remove('open');
+$('#adminModal').addEventListener('click', e => { if(e.target.id === 'adminModal') $('#adminModal').classList.remove('open'); });
+$('#adminBtn').style.display = ADMIN ? '' : 'none';
 
 // ---------- cabin card ----------
 const ccv = $('#cabinCanvas');
@@ -207,8 +237,7 @@ function openCabin(m, opt = {}){
   }, opt.delay || 1900);
 }
 $('#claim').onclick = () => { $('#card').classList.remove('open'); board(me.h); };
-$('#rm').onclick = async () => { if(!ADMIN || !confirm('Remove @' + me.h + '?')) return; const j = await api('DELETE', null, `?h=${encodeURIComponent(me.h)}&admin=${encodeURIComponent(ADMIN)}`);
-  if(j.removed){ crew.list = crew.list.filter(x => x !== me); crew.by.delete(me.h); $('#card').classList.remove('open'); occupy(); makeDecor(); updateHud(); goHome(); } };
+$('#rm').onclick = async () => { if(!ADMIN) return; if(await kick(me.h)){ $('#card').classList.remove('open'); goHome(); } };
 $('#syncBtn').style.display = ADMIN ? '' : 'none';
 $('#syncBtn').onclick = async () => { $('#syncBtn').textContent = '…'; const j = await api('POST', { action: 'sync' }, '?admin=' + encodeURIComponent(ADMIN)); alert(JSON.stringify(j, null, 1)); location.reload(); };
 $('#close').onclick = () => { $('#card').classList.remove('open'); history.replaceState(null, '', location.pathname); goHome(); };

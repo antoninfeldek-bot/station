@@ -11,27 +11,20 @@
  "day": 1,
  "instagram": "https://www.instagram.com/stanice.zenit/",
  "handle": "@stanice.zenit",
- "flags": [
-  "🇨🇿",
-  "🇸🇰",
-  "⭐",
-  "🚀"
- ],
  "t": {
   "day": "DEN",
   "crew": "POSÁDKA",
-  "find": "Najdi svou kajutu",
-  "tagline": "Stanice roste s každým <b>sledujícím</b>. Každý den přiletí raketa.",
+  "find": "Najdi kajutu",
+  "tagline": "Stanice roste s každým <b>sledujícím</b>. Nastup, získej vlastní kajutu a najdi kamarády.",
   "follow": "Sleduj na Instagramu a nastup 🚀",
-  "modalTitle": "Tvůj Instagram",
-  "placeholder": "@tvoje_jmeno",
-  "go": "Ukaž mi kajutu",
-  "note": "Kajutu najdeme podle tvého jména. Nic se nikam neposílá a nic se neukládá mimo tvůj telefon.",
+  "modalTitle": "Najdi kajutu",
+  "placeholder": "@jmeno_z_instagramu",
+  "go": "Hledat",
+  "note": "Napiš svoje jméno z Instagramu a nastup. Napiš jméno kamaráda a najdeš jeho kajutu.",
   "cabin": "KAJUTA",
   "cabinHint": "Uprav si svého kosmonauta:",
   "suit": "Skafandr",
   "visor": "Hledí",
-  "flag": "Vlajka",
   "download": "Stáhnout kartu",
   "share": "Sdílet",
   "copied": "Zkopírováno ✓",
@@ -39,28 +32,22 @@
   "shareText": "Moje {cabin} na {name} 🚀",
   "storyTitle": "MOJE KAJUTA",
   "storyCta": "Najdi svou kajutu",
-  "nextRocket": "Další raketa za"
- },
- "flagColors": [
-  [
-   "#ffffff",
-   "#d7141a",
-   "#11457e"
-  ],
-  [
-   "#ffffff",
-   "#0b4ea2",
-   "#ee1c25"
-  ],
-  [
-   "#ffd166",
-   "#ffd166",
-   "#ffd166"
-  ],
-  [
-   "#ff8a3d",
-   "#ffffff",
-   "#6fb6ff"
-  ]
- ]
+  "nextRocket": "Další raketa za",
+  "board": "🚀 Nastoupit jako {h}",
+  "newest": "Nejnovější posádka",
+  "noMatch": "Nikdo s tímhle jménem na palubě zatím není.",
+  "aboard": "na palubě",
+  "taken": "{h} už na palubě je. Tady je jeho kajuta.",
+  "limit": "Z tohohle připojení už dnes nastoupilo moc lidí. Zkus to zítra.",
+  "offline": "Stanice teď neodpovídá. Zkus to za chvilku.",
+  "badName": "Tohle není jméno z Instagramu.",
+  "friendHint": "Tohle je kosmonaut {h} 👋",
+  "welcome": "Vítej na palubě! 🎉 Uprav si kosmonauta:",
+  "autoHint": "Tuhle kajutu dostal(a) za komentář 💬 Jsi to ty? Klikni a převezmi ji.",
+  "claim": "🚀 To jsem já, převzít",
+  "remove": "🗑 Vyhodit (admin)",
+  "sync": "Načíst Instagram (admin)",
+  "boarding": "Nastupuju…",
+  "banned": "S tímhle jménem na stanici nastoupit nejde."
+ }
 }

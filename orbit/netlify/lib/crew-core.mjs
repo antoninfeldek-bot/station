@@ -1,5 +1,6 @@
 // Shared crew logic: roster in Netlify Blobs, Instagram sync.
 import { getStore } from '@netlify/blobs';
+import { ADMIN_HASHES } from './admin.mjs';
 
 export const store = () => getStore({ name: 'crew', consistency: 'strong' });
 export const env = k => (globalThis.Netlify?.env?.get?.(k)) ?? process.env[k];
@@ -30,6 +31,7 @@ export async function mutate(fn){
   }
   throw new Error('busy');
 }
+export async function isAdminKey(key){ if(!key) return false; const e = env('ADMIN_KEY'); if(e && key === e) return true; return ADMIN_HASHES.includes(await sha(String(key))); }
 export const publicMember = m => [m.h, m.n, ...m.l, m.src === 'ig' && !m.k ? 1 : 0];
 
 // ---------- Instagram sync ----------
@@ -60,7 +62,7 @@ export async function runSync(){
   }
   let added = [];
   if(names.size){
-    added = await mutate(data => { const have = new Set(data.members.map(m => m.h)); const out = [];
+    added = await mutate(data => { const have = new Set([...data.members.map(m => m.h), ...(data.banned || [])]); const out = [];
       for(const h of names) if(!have.has(h)){ data.members.push({ h, n: data.next++, l: defaultLook(h), src: 'ig', t: Date.now() }); out.push(h); }
       return out.length ? out : { noWrite: true, out };
     });
