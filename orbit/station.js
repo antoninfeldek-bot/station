@@ -99,23 +99,32 @@ export function buildStation(cfg){
   // rings with cabins: the station grows ring by ring
   const capacity=Math.max(CABINS, cfg.capacity||CABINS);
   const layout=ringLayout(capacity);
-  const pods=[], rings=[]; const EMPTY='#4a5175';
+  const pods=[], rings=[]; const EMPTY=new THREE.Color('#4a5175');
+  // cabins are drawn with instancing (3 draw calls per ring), so thousands of cabins stay smooth on phones
+  const shellGeo=new THREE.CapsuleGeometry(0.55,0.55,3,10).rotateZ(Math.PI/2);
+  const winGeo=new THREE.CircleGeometry(0.22,10).translate(0,0,0.6);
+  const shellMat=toon('#ffffff'); const winMat=new THREE.MeshBasicMaterial({color:'#ffffff',side:THREE.DoubleSide});
+  const dummy=new THREE.Object3D(); const inst=[];
   let minY=0,maxY=0;
   layout.forEach((L,li)=>{ const ringR=L.r, y=L.y; minY=Math.min(minY,y); maxY=Math.max(maxY,y);
     const ring=new THREE.Group(); ring.position.y=y; st.add(ring); rings.push(ring);
-    ring.add(M(new THREE.TorusGeometry(ringR,0.32,12,Math.max(96,L.n*4)),'#c9cfe3',0.08).rotateX(Math.PI/2));
+    ring.add(M(new THREE.TorusGeometry(ringR,0.32,8,Math.max(72,L.n*2)),'#c9cfe3',0.08).rotateX(Math.PI/2));
     const hubR=y===0&&ringR<8?1.8:1.2;
     for(let i=0;i<4;i++){ const a=i*Math.PI/2+(li%2)*Math.PI/4; const len=ringR-hubR; const sp=M(new THREE.CylinderGeometry(0.18,0.18,len,10),'#c9cfe3',0.1); sp.rotation.z=Math.PI/2; sp.rotation.y=a; sp.position.set(Math.cos(a)*(ringR+hubR)/2,0,-Math.sin(a)*(ringR+hubR)/2); ring.add(sp); }
-    for(let i=0;i<L.n;i++){ const a=i/L.n*Math.PI*2; const pod=new THREE.Group(); const k=pods.length;
-      const col=k%3===0?accent:(k%3===1?'#eef1f8':accent2);
-      const shell=M(new THREE.CapsuleGeometry(0.55,0.55,6,16), col); shell.rotation.z=Math.PI/2; pod.add(shell);
-      const w=M(new THREE.CircleGeometry(0.22,16),'#ffd166',0,{side:THREE.DoubleSide, emissive:new THREE.Color('#ffb84d'), emissiveIntensity:0.5}); w.position.set(0,0,0.6); pod.add(w);
-      const gl=glow('rgba(255,209,102,0.95)',3.2); gl.visible=false; pod.add(gl); pod.userData.glow=gl; pod.userData.win=w; pod.userData.shell=shell; pod.userData.col=col;
-      pod.position.set(Math.cos(a)*ringR,0,-Math.sin(a)*ringR); pod.rotation.y=a+Math.PI/2; ring.add(pod); pods.push(pod); } });
+    const sh=new THREE.InstancedMesh(shellGeo,shellMat,L.n), ol=new THREE.InstancedMesh(shellGeo,outlineMat,L.n), wn=new THREE.InstancedMesh(winGeo,winMat,L.n);
+    for(let i=0;i<L.n;i++){ const a=i/L.n*Math.PI*2; const k=pods.length;
+      dummy.position.set(Math.cos(a)*ringR,0,-Math.sin(a)*ringR); dummy.rotation.set(0,a+Math.PI/2,0); dummy.scale.setScalar(1); dummy.updateMatrix();
+      sh.setMatrixAt(i,dummy.matrix); wn.setMatrixAt(i,dummy.matrix); dummy.scale.setScalar(1.06); dummy.updateMatrix(); ol.setMatrixAt(i,dummy.matrix);
+      const anchor=new THREE.Object3D(); anchor.position.set(Math.cos(a)*ringR,0,-Math.sin(a)*ringR); ring.add(anchor);
+      anchor.userData={col:new THREE.Color(k%3===0?accent:(k%3===1?'#eef1f8':accent2)), ring:li, i}; pods.push(anchor); }
+    ring.add(sh); ring.add(ol); ring.add(wn); inst.push({sh,wn}); });
+  const selGlow=glow('rgba(255,209,102,0.95)',3.2); selGlow.visible=false;
+  function setSelected(i){ if(i<0||!pods[i]){ selGlow.visible=false; if(selGlow.parent) selGlow.parent.remove(selGlow); return; } pods[i].add(selGlow); selGlow.visible=true; }
   if(maxY-minY>0){ const spine=M(new THREE.CylinderGeometry(1.2,1.2,maxY-minY+2,24),'#dfe3f0'); spine.position.y=(maxY+minY)/2; st.add(spine); }
-  const topY=Math.max(4.3, maxY+1.6); port.position.y=topY; portR.position.y=topY+0.45; const dockY=topY+0.5;
-  function setOccupied(n){ pods.forEach((p,i)=>{ const on=typeof n==='function'?n(i):i<n; p.userData.shell.userData.mesh.material.color.set(on?p.userData.col:EMPTY);
-    const wm=p.userData.win.userData.mesh.material; wm.color.set(on?'#ffd166':'#2a2f4a'); wm.emissiveIntensity=on?0.5:0; }); }
+  const WIN_ON=new THREE.Color('#ffd166'), WIN_OFF=new THREE.Color('#2a2f4a');
+  function setOccupied(n){ pods.forEach((p,i)=>{ const on=typeof n==='function'?n(i):i<n; const I=inst[p.userData.ring];
+      I.sh.setColorAt(p.userData.i,on?p.userData.col:EMPTY); I.wn.setColorAt(p.userData.i,on?WIN_ON:WIN_OFF); });
+    inst.forEach(I=>{ I.sh.instanceColor.needsUpdate=true; I.wn.instanceColor.needsUpdate=true; }); }
   setOccupied(cfg.occupied==null?capacity:cfg.occupied);
   // solar wings
   const tex=panelTexture();
@@ -138,7 +147,7 @@ export function buildStation(cfg){
   function podWorld(i){ const v=new THREE.Vector3(); pods[i].getWorldPosition(v); return v; }
   function dockWorld(){ const v=new THREE.Vector3(0,dockY,0); return st.localToWorld(v); }
   const size=Math.max(...layout.map(L=>L.r))+Math.max(Math.abs(minY),maxY);
-  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, size, capacity:pods.length };
+  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, size, capacity:pods.length };
 }
 
 // small cabin interior for the "your cabin" card

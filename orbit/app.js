@@ -74,7 +74,7 @@ function build(){
 }
 function resize(){ if(!S) return; const w = innerWidth, h = innerHeight; R.setSize(w, h, false); S.camera.aspect = w/h; S.camera.fov = w < h ? 55 : 40; S.camera.updateProjectionMatrix(); }
 addEventListener('resize', resize);
-const homeDist = () => Math.min(90, Math.max(30, S.size * 2.6));
+const homeDist = () => Math.min(150, Math.max(30, S.size * (innerWidth < innerHeight ? 3.4 : 2.4)));
 
 let yaw = 0.6, pitch = 0.32, dist = 30, target = new THREE.Vector3(0, 0.5, 0);
 let fly = null;
@@ -82,9 +82,9 @@ let dragging = false, lx = 0, ly = 0, idle = 0;
 canvas.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; ly = e.clientY; idle = 0; fly = null; canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointermove', e => { if(!dragging) return; yaw -= (e.clientX - lx) * 0.006; pitch = Math.max(-0.3, Math.min(1.2, pitch + (e.clientY - ly) * 0.004)); lx = e.clientX; ly = e.clientY; });
 canvas.addEventListener('pointerup', () => dragging = false);
-canvas.addEventListener('wheel', e => { dist = Math.max(8, Math.min(120, dist + e.deltaY * 0.02)); idle = 0; }, { passive: true });
+canvas.addEventListener('wheel', e => { dist = Math.max(8, Math.min(170, dist + e.deltaY * 0.02)); idle = 0; }, { passive: true });
 let pinch = null;
-canvas.addEventListener('touchmove', e => { if(e.touches.length === 2){ const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); if(pinch) dist = Math.max(8, Math.min(120, dist * pinch / d)); pinch = d; } }, { passive: true });
+canvas.addEventListener('touchmove', e => { if(e.touches.length === 2){ const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); if(pinch) dist = Math.max(8, Math.min(170, dist * pinch / d)); pinch = d; } }, { passive: true });
 canvas.addEventListener('touchend', () => pinch = null);
 
 const ease = u => u < .5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3) / 2;
@@ -126,7 +126,8 @@ function loop(now){
   const cam = S.camera;
   cam.position.set(target.x + Math.sin(yaw)*Math.cos(pitch)*dist, target.y + Math.sin(pitch)*dist, target.z + Math.cos(yaw)*Math.cos(pitch)*dist);
   cam.lookAt(target);
-  S.pods.forEach((p, i) => { p.userData.glow.visible = i === selectedPod; if(i === selectedPod) p.userData.glow.material.opacity = 0.6 + 0.4*Math.sin(clock*4); });
+  if(S.selGlow.userData.sel !== selectedPod){ S.setSelected(selectedPod); S.selGlow.userData.sel = selectedPod; }
+  if(selectedPod >= 0) S.selGlow.material.opacity = 0.6 + 0.4*Math.sin(clock*4);
   R.render(S.scene, cam);
   if(cabin && $('#card').classList.contains('open')){ cabin.update(clock); CR.render(cabin.scene, cabin.camera); }
   requestAnimationFrame(loop);
@@ -238,4 +239,5 @@ $('#dl').onclick = () => {
 build(); dist = homeDist();
 const u = clean(qs.get('u'));
 if(u){ setTimeout(() => { if(crew.by.has(u)) openCabin(crew.by.get(u)); else { $('#find').onclick(); $('#handle').value = u; renderResults(); } }, 900); }
+if(qs.has('debug')) window.__R = R;
 requestAnimationFrame(loop);

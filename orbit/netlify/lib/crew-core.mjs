@@ -20,13 +20,13 @@ export async function loadRoster(s){
 // read-modify-write with retry (uses conditional writes when the library supports them)
 export async function mutate(fn){
   const s = store();
-  for(let i = 0; i < 6; i++){
+  for(let i = 0; i < 25; i++){
     const { data, etag } = await loadRoster(s);
     const result = await fn(data);
     if(result && result.noWrite) return result;
     const res = await s.setJSON('roster', data, etag ? { onlyIfMatch: etag } : { onlyIfNew: true });
     if(!res || res.modified !== false) return result;
-    await new Promise(r => setTimeout(r, 80 + Math.random() * 200));
+    await new Promise(r => setTimeout(r, 40 + Math.random() * (60 + i * 40)));
   }
   throw new Error('busy');
 }
@@ -50,11 +50,11 @@ export async function runSync(){
   }
   const me = await ig(`/me?fields=user_id,username,followers_count`, token);
   const own = clean(me.username);
-  const media = await ig(`/me/media?fields=id,timestamp&limit=15`, token);
+  const media = await ig(`/me/media?fields=id,timestamp&limit=20`, token);
   const names = new Set();
   for(const m of media.data || []){
     let url = `/${m.id}/comments?fields=id,username,text,from&limit=50`; let pages = 0;
-    while(url && pages < 6){ const c = await ig(url, token); pages++;
+    while(url && pages < 40){ const c = await ig(url, token); pages++;
       for(const x of c.data || []){ const h = clean(x.username || x.from?.username); if(h && h !== own && valid(h)) names.add(h); }
       const next = c.paging?.next; url = next ? next.replace(IG, '').replace(/[?&]access_token=[^&]+/, '') : null; }
   }
