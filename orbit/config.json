@@ -1,0 +1,66 @@
+{
+ "lang": "en",
+ "title": "ORBIT Station 🚀",
+ "name": "ORBIT STATION",
+ "hubLabel": "ORBIT-1",
+ "prefix": "OR",
+ "accent": "#ff6fd8",
+ "accent2": "#5fe0d0",
+ "sky": "#070a24",
+ "crew": 0,
+ "day": 1,
+ "instagram": "https://www.instagram.com/orbit.station/",
+ "handle": "@orbit.station",
+ "flags": [
+  "🇺🇸",
+  "⭐",
+  "🌍",
+  "🚀"
+ ],
+ "t": {
+  "day": "DAY",
+  "crew": "CREW",
+  "find": "Find your cabin",
+  "tagline": "The station grows with every <b>follower</b>. A rocket arrives every day.",
+  "follow": "Follow on Instagram and come aboard 🚀",
+  "modalTitle": "Your Instagram",
+  "placeholder": "@your_name",
+  "go": "Show my cabin",
+  "note": "We find your cabin from your name. Nothing is sent anywhere and nothing is saved outside your phone.",
+  "cabin": "CABIN",
+  "cabinHint": "Customize your astronaut:",
+  "suit": "Suit",
+  "visor": "Visor",
+  "flag": "Flag",
+  "download": "Download card",
+  "share": "Share",
+  "copied": "Copied ✓",
+  "back": "Back to the station",
+  "shareText": "My {cabin} on {name} 🚀",
+  "storyTitle": "MY CABIN",
+  "storyCta": "Find your cabin",
+  "nextRocket": "Next rocket in"
+ },
+ "flagColors": [
+  [
+   "#b22234",
+   "#ffffff",
+   "#3c3b6e"
+  ],
+  [
+   "#ffd166",
+   "#ffd166",
+   "#ffd166"
+  ],
+  [
+   "#3fae7a",
+   "#2350c4",
+   "#3fae7a"
+  ],
+  [
+   "#ff6fd8",
+   "#ffffff",
+   "#5fe0d0"
+  ]
+ ]
+}

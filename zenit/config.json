@@ -1,0 +1,66 @@
+{
+ "lang": "cs",
+ "title": "Stanice ZENIT 🚀",
+ "name": "STANICE ZENIT",
+ "hubLabel": "ZENIT",
+ "prefix": "ZN",
+ "accent": "#ff8a3d",
+ "accent2": "#6fb6ff",
+ "sky": "#0a0820",
+ "crew": 0,
+ "day": 1,
+ "instagram": "https://www.instagram.com/stanice.zenit/",
+ "handle": "@stanice.zenit",
+ "flags": [
+  "🇨🇿",
+  "🇸🇰",
+  "⭐",
+  "🚀"
+ ],
+ "t": {
+  "day": "DEN",
+  "crew": "POSÁDKA",
+  "find": "Najdi svou kajutu",
+  "tagline": "Stanice roste s každým <b>sledujícím</b>. Každý den přiletí raketa.",
+  "follow": "Sleduj na Instagramu a nastup 🚀",
+  "modalTitle": "Tvůj Instagram",
+  "placeholder": "@tvoje_jmeno",
+  "go": "Ukaž mi kajutu",
+  "note": "Kajutu najdeme podle tvého jména. Nic se nikam neposílá a nic se neukládá mimo tvůj telefon.",
+  "cabin": "KAJUTA",
+  "cabinHint": "Uprav si svého kosmonauta:",
+  "suit": "Skafandr",
+  "visor": "Hledí",
+  "flag": "Vlajka",
+  "download": "Stáhnout kartu",
+  "share": "Sdílet",
+  "copied": "Zkopírováno ✓",
+  "back": "Zpět na stanici",
+  "shareText": "Moje {cabin} na {name} 🚀",
+  "storyTitle": "MOJE KAJUTA",
+  "storyCta": "Najdi svou kajutu",
+  "nextRocket": "Další raketa za"
+ },
+ "flagColors": [
+  [
+   "#ffffff",
+   "#d7141a",
+   "#11457e"
+  ],
+  [
+   "#ffffff",
+   "#0b4ea2",
+   "#ee1c25"
+  ],
+  [
+   "#ffd166",
+   "#ffd166",
+   "#ffd166"
+  ],
+  [
+   "#ff8a3d",
+   "#ffffff",
+   "#6fb6ff"
+  ]
+ ]
+}
