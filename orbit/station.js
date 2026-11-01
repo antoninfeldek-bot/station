@@ -44,9 +44,6 @@ export function makeAstronaut(look){ look=look||{suit:'#ffffff',visor:'#1b2350',
   const armR=M(new THREE.CapsuleGeometry(0.15,0.42,4,10), look.suit); armR.position.set(0.55,0.25,0); armR.rotation.z=-0.9; g.add(armR);
   const legL=M(new THREE.CapsuleGeometry(0.17,0.36,4,10), look.suit); legL.position.set(-0.2,-0.75,0); g.add(legL);
   const legR=M(new THREE.CapsuleGeometry(0.17,0.36,4,10), look.suit); legR.position.set(0.2,-0.75,0); legR.rotation.z=0.15; g.add(legR);
-  const f=FLAG_COLORS[look.flag%FLAG_COLORS.length]; const fl=new THREE.Group();
-  f.forEach((c,i)=>{ const s=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.06,0.02), new THREE.MeshBasicMaterial({color:c})); s.position.y=-i*0.06; fl.add(s); });
-  fl.position.set(-0.36,0.38,0.33); fl.rotation.y=-0.4; g.add(fl);
   g.userData.armR=armR; g.userData.armL=armL;
   return g; }
 
@@ -121,6 +118,7 @@ export function buildStation(cfg){
   const selGlow=glow('rgba(255,209,102,0.95)',3.2); selGlow.visible=false;
   function setSelected(i){ if(i<0||!pods[i]){ selGlow.visible=false; if(selGlow.parent) selGlow.parent.remove(selGlow); return; } pods[i].add(selGlow); selGlow.visible=true; }
   if(maxY-minY>0){ const spine=M(new THREE.CylinderGeometry(1.2,1.2,maxY-minY+2,24),'#dfe3f0'); spine.position.y=(maxY+minY)/2; st.add(spine); }
+  const topY=Math.max(4.3, maxY+1.6); port.position.y=topY; portR.position.y=topY+0.45; const dockY=topY+0.5;
   const WIN_ON=new THREE.Color('#ffd166'), WIN_OFF=new THREE.Color('#2a2f4a');
   function setOccupied(n){ pods.forEach((p,i)=>{ const on=typeof n==='function'?n(i):i<n; const I=inst[p.userData.ring];
       I.sh.setColorAt(p.userData.i,on?p.userData.col:EMPTY); I.wn.setColorAt(p.userData.i,on?WIN_ON:WIN_OFF); });

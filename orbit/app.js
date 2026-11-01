@@ -53,7 +53,7 @@ $('#follow').href = CFG.instagram;
 $('#modalTitle').textContent = T.modalTitle;
 $('#handle').placeholder = T.placeholder;
 $('#modalNote').textContent = T.note;
-$('#suitL').textContent = T.suit; $('#visorL').textContent = T.visor; $('#flagL').textContent = T.flag;
+$('#suitL').textContent = T.suit; $('#visorL').textContent = T.visor;
 $('#dl').textContent = T.download; $('#share').textContent = T.share; $('#close').textContent = T.back;
 $('#next').textContent = T.nextRocket;
 $('#claim').textContent = T.claim; $('#rm').textContent = T.remove; $('#syncBtn').textContent = T.sync;
@@ -181,8 +181,7 @@ let saveT = null;
 function chips(el, list, key, render){ el.innerHTML = ''; list.forEach((v, i) => { const b = document.createElement('button'); b.className = 'chip'; render(b, v, i);
   b.onclick = () => { if(!mine(me)) return; me.look = { ...me.look, [key]: key === 'flag' ? i : v }; cabin.setLook(me.look); markChips(); makeDecor();
     clearTimeout(saveT); const m = me; saveT = setTimeout(() => api('POST', { action: 'look', h: m.h, key: store.get('key:' + m.h), l: fromLook(m.look) }).catch(() => {}), 700); }; el.appendChild(b); }); }
-function markChips(){ document.querySelectorAll('#suits .chip').forEach((b,i)=>b.classList.toggle('on', SUITS[i]===me.look.suit)); document.querySelectorAll('#visors .chip').forEach((b,i)=>b.classList.toggle('on', VISORS[i]===me.look.visor)); document.querySelectorAll('#flags .chip').forEach((b,i)=>b.classList.toggle('on', i===me.look.flag)); }
-const FLAGS = CFG.flags;
+function markChips(){ document.querySelectorAll('#suits .chip').forEach((b,i)=>b.classList.toggle('on', SUITS[i]===me.look.suit)); document.querySelectorAll('#visors .chip').forEach((b,i)=>b.classList.toggle('on', VISORS[i]===me.look.visor)); }
 function openCabin(m, opt = {}){
   if(!m) return;
   me = m; const pod = m.n - 1;
@@ -202,7 +201,6 @@ function openCabin(m, opt = {}){
     $('#rm').style.display = ADMIN ? '' : 'none';
     chips($('#suits'), SUITS, 'suit', (b, v) => { b.style.background = v; });
     chips($('#visors'), VISORS, 'visor', (b, v) => { b.style.background = v; });
-    chips($('#flags'), FLAGS, 'flag', (b, v) => { b.textContent = v; });
     markChips();
     $('#card').classList.add('open');
     history.replaceState(null, '', '?u=' + encodeURIComponent(m.h));
