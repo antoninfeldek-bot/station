@@ -11,7 +11,7 @@ export default async (req, context) => {
     if(req.method === 'GET'){
       const [{ data }, stats] = await Promise.all([loadRoster(s), s.get('stats', { type: 'json' })]);
       const out = { followers: stats?.followers ?? null, synced: stats?.at ?? null, members: data.members.map(publicMember) };
-      if(admin) out.admin = { info: Object.fromEntries(data.members.map(m => [m.h, [m.src, m.t || 0, m.k ? 1 : 0]])), banned: data.banned || [] };
+      if(admin) out.admin = { info: Object.fromEntries(data.members.map(m => [m.h, [m.src, m.t || 0, m.k ? 1 : 0, m.ok ? 1 : 0]])), banned: data.banned || [] };
       return json(out);
     }
     if(req.method === 'DELETE'){
@@ -30,6 +30,11 @@ export default async (req, context) => {
       return json(await runSync());
     }
     if(body.action === 'admin'){ return json({ ok: admin }); }
+    if(body.action === 'verify'){
+      if(!admin) return json({ error: 'forbidden' }, 403);
+      const list = (Array.isArray(body.hs) ? body.hs : [body.h]).map(clean); const ok = body.ok !== false;
+      return json(await mutate(d => { let n = 0; for(const m of d.members) if(list.includes(m.h)){ if(ok) m.ok = 1; else delete m.ok; n++; } return { ok: true, changed: n }; }));
+    }
     if(body.action === 'unban'){
       if(!admin) return json({ error: 'forbidden' }, 403);
       const h = clean(body.h);

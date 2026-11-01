@@ -41,6 +41,9 @@ input{width:100%;font:900 22px 'Inter Display',system-ui;padding:14px 16px;borde
 .res i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);flex:none;font-style:normal}
 .res em{margin-left:auto;font-style:normal;color:var(--gold);font-size:14px}
 .res.board{background:var(--accent);justify-content:center}
+.tabs{display:flex;gap:6px;margin:0 0 10px}.tabs button{flex:1;font:900 13px 'Inter Display',system-ui;color:#fff;background:#1d2766;border:3px solid var(--ink);border-radius:12px;padding:8px 4px;cursor:pointer}
+.tabs button.on{background:var(--accent)}
+.arow button.gr{background:#3fae7a}.arow button.gy{background:#5a6290}
 .arow{display:flex;align-items:center;gap:8px;background:#1d2766;border:3px solid var(--ink);border-radius:12px;padding:8px 10px;font-size:15px}
 .arow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.arow .src{font-size:11px;opacity:.7;white-space:nowrap}
 .arow a{color:var(--accent2);font-weight:900;font-size:13px;text-decoration:none;white-space:nowrap}
@@ -83,9 +86,11 @@ input{width:100%;font:900 22px 'Inter Display',system-ui;padding:14px 16px;borde
   <div class="list" id="results"></div>
 </div></div>
 <div class="modal" id="adminModal"><div class="box" style="width:min(520px,100%)">
-  <h2>👮 Posádka <small id="admCount" style="font-size:14px;opacity:.7"></small></h2>
+  <h2>👮 Posádka</h2>
+  <div class="tabs"><button data-tab="new" class="on">🆕 Noví <span id="cNew"></span></button><button data-tab="ok">✅ Zkontrolovaní <span id="cOk"></span></button><button data-tab="ban">🚫 Vyhození <span id="cBan"></span></button></div>
   <input id="admQ" placeholder="hledat…" autocomplete="off" autocapitalize="off" spellcheck="false">
-  <div class="note">Klikni na <b>IG ↗</b>, zkontroluj, jestli tě sleduje. Když ne, dej <b>Vyhodit</b>. Vyhozený se už sám nevrátí (ani komentářem).</div>
+  <div class="note" id="admHelp"></div>
+  <div class="row" id="admTools" style="margin-top:8px;justify-content:flex-start"><button class="admin" id="admCopy">📋 Kopírovat jména</button><button class="admin" id="admAllOk">✅ Všichni noví jsou OK</button></div>
   <div class="list" id="admList"></div>
   <div class="row" style="margin-top:12px"><button class="btn alt" id="admClose">Zavřít</button></div>
 </div></div>

@@ -182,17 +182,39 @@ async function kick(h){
   if(ADMINDATA && !ADMINDATA.banned.includes(h)) ADMINDATA.banned.push(h);
   occupy(); makeDecor(); updateHud(); return true;
 }
+let admTab = 'new';
+const isOk = h => !!(ADMINDATA?.info?.[h]?.[3]);
+const HELP = { new: 'Lidi, které jsi ještě nezkontroloval. Klikni na <b>IG ↗</b> a podívej se, jestli tě sledují. Pak dej <b>✅ OK</b>, nebo <b>Vyhodit</b>.',
+  ok: 'Tyhle už máš zkontrolované. Znovu je procházet nemusíš.', ban: 'Vyhození se sami nevrátí. <b>Vrátit</b> je pustí zpátky.' };
+function admRows(){ const q = clean($('#admQ').value);
+  if(admTab === 'ban') return (ADMINDATA?.banned || []).filter(h => !q || h.includes(q)).map(h => ({ h }));
+  return [...crew.list].filter(m => (admTab === 'ok') === isOk(m.h)).filter(m => !q || m.h.includes(q)).sort((a, b) => admTab === 'new' ? a.n - b.n : b.n - a.n); }
 function renderAdmin(){
-  const q = clean($('#admQ').value); const info = ADMINDATA?.info || {};
-  const list = [...crew.list].sort((a, b) => b.n - a.n).filter(m => !q || m.h.includes(q)).slice(0, 300);
-  $('#admCount').textContent = `(${crew.list.length} na palubě)`;
-  const src = m => { const i = info[m.h]; if(!i) return ''; return (i[0] === 'ig' ? '💬 komentář' : '🌐 web') + (i[0] === 'ig' && !i[2] ? '' : ''); };
-  let html = list.map(m => `<div class="arow"><div style="flex:1;min-width:0"><b style="display:block">@${esc(m.h)}</b><span class="src">${CFG.prefix}-${String(m.n).padStart(4,'0')} · ${src(m)}</span></div><a href="https://www.instagram.com/${encodeURIComponent(m.h)}/" target="_blank" rel="noopener">IG ↗</a><button data-kick="${esc(m.h)}">Vyhodit</button></div>`).join('');
-  const banned = (ADMINDATA?.banned || []).filter(h => !q || h.includes(q));
-  if(banned.length) html += `<h4>VYHOZENÍ</h4>` + banned.map(h => `<div class="arow"><b>@${esc(h)}</b><button class="ok" data-unban="${esc(h)}">Vrátit</button></div>`).join('');
-  $('#admList').innerHTML = html || '<div class="note">Nikdo.</div>';
+  const info = ADMINDATA?.info || {};
+  const nNew = crew.list.filter(m => !isOk(m.h)).length;
+  $('#cNew').textContent = nNew; $('#cOk').textContent = crew.list.length - nNew; $('#cBan').textContent = (ADMINDATA?.banned || []).length;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === admTab));
+  $('#admHelp').innerHTML = HELP[admTab];
+  $('#admAllOk').style.display = admTab === 'new' && nNew ? '' : 'none';
+  $('#admCopy').style.display = admTab === 'ban' ? 'none' : '';
+  const rows = admRows().slice(0, 400);
+  const src = h => { const i = info[h]; return i ? (i[0] === 'ig' ? '💬 komentář' : '🌐 web') : ''; };
+  const ig = h => `<a href="https://www.instagram.com/${encodeURIComponent(h)}/" target="_blank" rel="noopener">IG ↗</a>`;
+  let html;
+  if(admTab === 'ban') html = rows.map(r => `<div class="arow"><b>@${esc(r.h)}</b>${ig(r.h)}<button class="ok" data-unban="${esc(r.h)}">Vrátit</button></div>`).join('');
+  else html = rows.map(m => `<div class="arow"><div style="flex:1;min-width:0"><b style="display:block">@${esc(m.h)}</b><span class="src">${CFG.prefix}-${String(m.n).padStart(4,'0')} · ${src(m.h)}</span></div>${ig(m.h)}`
+    + (admTab === 'new' ? `<button class="gr" data-ok="${esc(m.h)}">✅ OK</button>` : `<button class="gy" data-unok="${esc(m.h)}">↩</button>`)
+    + `<button data-kick="${esc(m.h)}">Vyhodit</button></div>`).join('');
+  $('#admList').innerHTML = html || '<div class="note">Nikdo. 🎉</div>';
 }
+async function verify(hs, ok){ const j = await api('POST', { action: 'verify', hs, ok }, '?admin=' + encodeURIComponent(ADMIN)); if(j.error){ alert('Nepovedlo se: ' + j.error); return; }
+  hs.forEach(h => { const i = ADMINDATA.info[h] || (ADMINDATA.info[h] = ['web', 0, 0, 0]); i[3] = ok ? 1 : 0; }); renderAdmin(); }
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { admTab = b.dataset.tab; renderAdmin(); });
+$('#admCopy').onclick = async () => { const t = admRows().map(m => '@' + m.h).join('\n'); try { await navigator.clipboard.writeText(t); $('#admCopy').textContent = '✓ Zkopírováno'; } catch(e){ prompt('Zkopíruj:', t); } setTimeout(() => $('#admCopy').textContent = '📋 Kopírovat jména', 1500); };
+$('#admAllOk').onclick = () => { const hs = admRows().map(m => m.h); if(hs.length && confirm(`Označit ${hs.length} lidí jako zkontrolované?`)) verify(hs, true); };
 $('#admList').addEventListener('click', async e => { const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.ok) return verify([b.dataset.ok], true);
+  if(b.dataset.unok) return verify([b.dataset.unok], false);
   if(b.dataset.kick){ if(await kick(b.dataset.kick)) renderAdmin(); }
   if(b.dataset.unban){ const h = b.dataset.unban; await api('POST', { action: 'unban', h }, '?admin=' + encodeURIComponent(ADMIN)); ADMINDATA.banned = ADMINDATA.banned.filter(x => x !== h); renderAdmin(); } });
 $('#admQ').addEventListener('input', renderAdmin);
@@ -238,7 +260,7 @@ function openCabin(m, opt = {}){
 }
 $('#claim').onclick = () => { $('#card').classList.remove('open'); board(me.h); };
 $('#rm').onclick = async () => { if(!ADMIN) return; if(await kick(me.h)){ $('#card').classList.remove('open'); goHome(); } };
-$('#syncBtn').style.display = ADMIN ? '' : 'none';
+$('#syncBtn').style.display = ADMIN && crew.followers != null ? '' : 'none';
 $('#syncBtn').onclick = async () => { $('#syncBtn').textContent = '…'; const j = await api('POST', { action: 'sync' }, '?admin=' + encodeURIComponent(ADMIN)); alert(JSON.stringify(j, null, 1)); location.reload(); };
 $('#close').onclick = () => { $('#card').classList.remove('open'); history.replaceState(null, '', location.pathname); goHome(); };
 $('#share').onclick = async () => { const url = location.origin + location.pathname + '?u=' + encodeURIComponent(me.h);
