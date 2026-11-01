@@ -149,7 +149,7 @@ function renderResults(){
 }
 $('#results').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; if(b.dataset.h) openCabin(crew.by.get(b.dataset.h)); else if(b.dataset.board) board(b.dataset.board); });
 $('#handle').addEventListener('input', () => { if(!clean($('#handle').value)) msg(''); renderResults(); });
-$('#handle').addEventListener('keydown', e => { if(e.key !== 'Enter') return; const q = clean($('#handle').value); if(crew.by.has(q)) openCabin(crew.by.get(q)); else if(valid(q)) board(q); else msg(T.badName); });
+$('#handle').addEventListener('keydown', e => { if(e.key !== 'Enter') return; const q = clean($('#handle').value); if(crew.by.has(q)) openCabin(crew.by.get(q)); else if(!valid(q)) msg(T.badName); else { renderResults(); msg(T.noMatch); } });
 $('#find').onclick = () => { $('#modal').classList.add('open'); msg(''); const m = store.get('me'); $('#handle').value = ''; renderResults(); if(m && crew.by.has(m)) $('#handle').placeholder = '@' + m; setTimeout(() => $('#handle').focus(), 50); };
 $('#modal').addEventListener('click', e => { if(e.target.id === 'modal') $('#modal').classList.remove('open'); });
 
