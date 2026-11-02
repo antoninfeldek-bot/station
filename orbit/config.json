@@ -49,5 +49,6 @@
   "sync": "Sync Instagram (admin)",
   "boarding": "Boarding…",
   "banned": "This name can't board the station."
- }
+ },
+ "startDate": "2026-11-01"
 }
