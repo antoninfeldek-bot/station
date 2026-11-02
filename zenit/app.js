@@ -121,7 +121,7 @@ function loop(now){
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt; idle += dt;
   S.update(clock); rocketAt(clock);
   const rr = S.size + 3;
-  decor.forEach((a, i) => { const ang = clock*0.12 + i/decor.length*Math.PI*2; const r = rr + (i%3)*1.5; a.position.set(Math.cos(ang)*r, 2.5 + Math.sin(clock*0.8 + i)*0.8 + (i%2)*1.2, Math.sin(ang)*r); a.rotation.set(Math.sin(clock + i)*0.3, clock*0.5 + i, 0.2); });
+  decor.forEach((a, i) => { const ang = clock*0.12 + i/decor.length*Math.PI*2; const r = rr + (i%3)*1.5; a.position.set(Math.cos(ang)*r, 2.5 + Math.sin(clock*0.8 + i)*0.8 + (i%2)*1.2, Math.sin(ang)*r); a.rotation.set(Math.sin(clock + i)*0.3, clock*0.5 + i, 0.2); if(a.userData.animate) a.userData.animate(clock + i * 1.7, false); });
   if(fly){ const u = Math.min(1, (clock - fly.t0) / fly.dur), e = ease(u); yaw = fly.from.yaw + (fly.to.yaw - fly.from.yaw)*e; pitch = fly.from.pitch + (fly.to.pitch - fly.from.pitch)*e; dist = fly.from.dist + (fly.to.dist - fly.from.dist)*e; target.lerpVectors(fly.from.target, fly.to.target, e); if(u >= 1) fly = null; }
   else if(!dragging && idle > 4 && selectedPod < 0) yaw += dt*0.05;
   if(selectedPod >= 0){ const w = S.podWorld(selectedPod); target.lerp(w, 0.08); }
