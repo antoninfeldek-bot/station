@@ -99,6 +99,15 @@ export function makeRocket(accent){ const g=new THREE.Group();
 export function buildStation(cfg){
   const accent=cfg.accent||'#ff6fd8', accent2=cfg.accent2||'#5fe0d0';
   const scene=new THREE.Scene(); scene.background=new THREE.Color(cfg.sky||'#070a24');
+  // nebula sky dome
+  { const c=document.createElement('canvas'); c.width=1024; c.height=512; const x=c.getContext('2d');
+    const g=x.createLinearGradient(0,0,0,512); g.addColorStop(0,'#05061a'); g.addColorStop(0.55,'#0b0f33'); g.addColorStop(1,'#141448'); x.fillStyle=g; x.fillRect(0,0,1024,512);
+    let q=5; const rq=()=>{ q=(q*16807)%2147483647; return q/2147483647; };
+    const cols=[accent,accent2,'#6f5cff','#3a7bff'];
+    for(let i=0;i<26;i++){ const cx=rq()*1024, cy=120+rq()*300, rr=60+rq()*170; const gg=x.createRadialGradient(cx,cy,0,cx,cy,rr); const col=cols[i%4];
+      gg.addColorStop(0,col+'66'); gg.addColorStop(0.5,col+'26'); gg.addColorStop(1,col+'00'); x.fillStyle=gg; x.fillRect(cx-rr,cy-rr,rr*2,rr*2); }
+    const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace;
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(300,48,24), new THREE.MeshBasicMaterial({map:t,side:THREE.BackSide,depthWrite:false}))); }
   scene.add(new THREE.HemisphereLight('#bcd2ff','#2a1c4a',1.4));
   const sun=new THREE.DirectionalLight('#ffffff',2.4); sun.position.set(8,12,10); scene.add(sun);
   // stars
@@ -107,6 +116,15 @@ export function buildStation(cfg){
   for(let i=0;i<N;i++){ const th=r()*Math.PI*2, ph=Math.acos(2*r()-1), R=180+r()*60; pos[i*3]=R*Math.sin(ph)*Math.cos(th); pos[i*3+1]=R*Math.cos(ph); pos[i*3+2]=R*Math.sin(ph)*Math.sin(th); }
   sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
   const stars=new THREE.Points(sg,new THREE.PointsMaterial({color:'#dfe6ff',size:1.1,sizeAttenuation:true})); scene.add(stars);
+  const sg2=new THREE.BufferGeometry(); const N2=260, p2=new Float32Array(N2*3), c2=new Float32Array(N2*3); const tint=[[1,0.85,0.7],[0.75,0.85,1],[1,1,1],[1,0.75,0.95]];
+  for(let i=0;i<N2;i++){ const th=r()*Math.PI*2, ph=Math.acos(2*r()-1), R=200+r()*50; p2[i*3]=R*Math.sin(ph)*Math.cos(th); p2[i*3+1]=R*Math.cos(ph); p2[i*3+2]=R*Math.sin(ph)*Math.sin(th); const tc=tint[i%4]; c2.set(tc,i*3); }
+  sg2.setAttribute('position',new THREE.BufferAttribute(p2,3)); sg2.setAttribute('color',new THREE.BufferAttribute(c2,3));
+  const dotC=document.createElement('canvas'); dotC.width=dotC.height=64; { const x=dotC.getContext('2d'); const g=x.createRadialGradient(32,32,0,32,32,32); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.35,'rgba(255,255,255,0.9)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,64,64); }
+  const dotT=new THREE.CanvasTexture(dotC);
+  const bigStars=new THREE.Points(sg2,new THREE.PointsMaterial({size:3.4,map:dotT,vertexColors:true,sizeAttenuation:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})); stars.add(bigStars);
+  stars.material.map=dotT; stars.material.transparent=true; stars.material.depthWrite=false; stars.material.size=1.6;
+  const sunGlow=glow('rgba(255,236,200,1)',70); sunGlow.position.set(120,90,-180); scene.add(sunGlow);
+  const sunCore=glow('rgba(255,255,255,1)',22); sunCore.position.copy(sunGlow.position); scene.add(sunCore);
   // earth
   const earth=new THREE.Group(); earth.position.set(0,-62,-10); scene.add(earth);
   const ocean=M(new THREE.SphereGeometry(48,48,32),'#2350c4',0.012); earth.add(ocean);
@@ -115,7 +133,11 @@ export function buildStation(cfg){
     land.position.setFromSphericalCoords(44.5,ph,th); land.scale.set(1,0.25,1); land.lookAt(0,0,0); land.rotateX(Math.PI/2); earth.add(land); }
   for(let i=0;i<18;i++){ const th=rr()*Math.PI*2, ph=rr()*Math.PI; const cl=new THREE.Mesh(new THREE.SphereGeometry(4+rr()*5,12,10), toon('#ffffff',{transparent:true,opacity:0.85}));
     cl.position.setFromSphericalCoords(49.2,ph,th); cl.scale.set(1.6,0.3,1); cl.lookAt(0,0,0); cl.rotateX(Math.PI/2); earth.add(cl); }
-  const atm=new THREE.Mesh(new THREE.SphereGeometry(51,48,32), new THREE.MeshBasicMaterial({color:accent2,transparent:true,opacity:0.13,side:THREE.BackSide})); earth.add(atm);
+  const atmMat=new THREE.ShaderMaterial({ transparent:true, side:THREE.BackSide, depthWrite:false, blending:THREE.AdditiveBlending,
+    uniforms:{ c:{value:new THREE.Color(accent2)} },
+    vertexShader:'varying vec3 vN; varying vec3 vP; void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vP=mv.xyz; gl_Position=projectionMatrix*mv; }',
+    fragmentShader:'uniform vec3 c; varying vec3 vN; varying vec3 vP; void main(){ float f=pow(1.0-abs(dot(normalize(-vP),vN)),3.5); gl_FragColor=vec4(c,f*0.55); }' });
+  const atm=new THREE.Mesh(new THREE.SphereGeometry(53,64,40), atmMat); earth.add(atm);
   // station
   const st=new THREE.Group(); scene.add(st);
   const hub=M(new THREE.CylinderGeometry(1.8,1.8,4.4,32),'#eef1f8'); st.add(hub);
@@ -131,6 +153,18 @@ export function buildStation(cfg){
   lx.font='900 84px "Inter Display", Inter, sans-serif'; lx.fillStyle='#0b0a1f'; lx.textAlign='center'; lx.textBaseline='middle'; lx.fillText(cfg.hubLabel||'ORBIT-1',256,68);
   const lt=new THREE.CanvasTexture(lc); lt.colorSpace=THREE.SRGBColorSpace;
   const label=new THREE.Mesh(new THREE.CylinderGeometry(1.87,1.87,0.88,32,1,true,-0.7,1.4), new THREE.MeshBasicMaterial({map:lt})); st.add(label);
+  // hub details: window rows, radiator fins, dish antenna, beacons
+  for(const y of [-1.0,-1.6]) for(let i=0;i<16;i++){ const a=i/16*Math.PI*2+0.1; const w=new THREE.Mesh(new THREE.CircleGeometry(0.11,10), new THREE.MeshBasicMaterial({color:i%3?'#ffd166':'#9fe7ff',side:THREE.DoubleSide}));
+    w.position.set(Math.sin(a)*1.82,y,Math.cos(a)*1.82); w.lookAt(Math.sin(a)*4,y,Math.cos(a)*4); st.add(w); }
+  for(const side of [0,Math.PI]){ const fin=new THREE.Group(); fin.rotation.y=side+Math.PI/2; st.add(fin);
+    const arm=M(new THREE.BoxGeometry(0.14,0.14,1.0),'#c9cfe3',0.12); arm.position.set(0,-0.6,2.3); fin.add(arm);
+    const pan=M(new THREE.BoxGeometry(0.05,1.5,1.0),'#f4f6fb',0.1); pan.position.set(0,-0.6,3.25); fin.add(pan);
+    for(let k=0;k<4;k++){ const ln=new THREE.Mesh(new THREE.BoxGeometry(0.06,1.4,0.03), new THREE.MeshBasicMaterial({color:'#b9c0ce'})); ln.position.set(0,-0.6,2.85+k*0.27); fin.add(ln); } }
+  const dish=new THREE.Group(); dish.position.set(-1.2,3.1,0.9); dish.rotation.set(-0.6,0,0.5); st.add(dish);
+  dish.add(M(new THREE.CylinderGeometry(0.05,0.05,0.7,6),'#c9cfe3',0.15));
+  const bowl=M(new THREE.SphereGeometry(0.55,20,10,0,Math.PI*2,0,Math.PI*0.32),'#f4f6fb',0.06,{side:THREE.DoubleSide}); bowl.position.y=0.55; bowl.rotation.x=Math.PI; dish.add(bowl);
+  const feed=M(new THREE.SphereGeometry(0.07,8,6),accent,0.1); feed.position.y=0.25; dish.add(feed);
+  const beacons=[]; for(let i=0;i<4;i++){ const a=i*Math.PI/2+Math.PI/4; const b=glow(i%2?'rgba(255,90,90,1)':'rgba(120,255,170,1)',0.9); b.position.set(Math.sin(a)*1.9,2.25,Math.cos(a)*1.9); st.add(b); beacons.push(b); }
   // rings with cabins: the station grows ring by ring
   const capacity=Math.max(CABINS, cfg.capacity||CABINS);
   const layout=ringLayout(capacity);
@@ -156,6 +190,9 @@ export function buildStation(cfg){
   const selGlow=glow('rgba(255,209,102,0.95)',3.2); selGlow.visible=false;
   function setSelected(i){ if(i<0||!pods[i]){ selGlow.visible=false; if(selGlow.parent) selGlow.parent.remove(selGlow); return; } pods[i].add(selGlow); selGlow.visible=true; }
   if(maxY-minY>0){ const spine=M(new THREE.CylinderGeometry(1.2,1.2,maxY-minY+2,24),'#dfe3f0'); spine.position.y=(maxY+minY)/2; st.add(spine); }
+  // ---- go-kart track under the station ----
+  let kart=null, trackR=0;
+  if((cfg.features||[]).includes('gokart')){ kart=buildKartTrack(st, minY, accent, accent2); trackR=kart.outer; }
   const topY=Math.max(4.3, maxY+1.6); port.position.y=topY; portR.position.y=topY+0.45; const dockY=topY+0.5;
   const WIN_ON=new THREE.Color('#ffd166'), WIN_OFF=new THREE.Color('#2a2f4a');
   function setOccupied(n){ pods.forEach((p,i)=>{ const on=typeof n==='function'?n(i):i<n; const I=inst[p.userData.ring];
@@ -179,11 +216,13 @@ export function buildStation(cfg){
   const camera=new THREE.PerspectiveCamera(42,9/16,0.1,600);
   function update(t){ earth.rotation.y=t*0.01; stars.rotation.y=t*0.002; rings.forEach((r,i)=>r.rotation.y=t*0.05*(i%2?-1:1));
     blinkA.material.opacity=((t*1.4)%1)<0.5?1:0.15; blinkB.material.opacity=((t*1.4+0.5)%1)<0.5?1:0.15;
-    st.position.y=Math.sin(t*0.7)*0.15; }
+    st.position.y=Math.sin(t*0.7)*0.15;
+    beacons.forEach((b,i)=>b.material.opacity=((t*0.9+i*0.25)%1)<0.3?1:0.15);
+    if(kart) kart.update(t); }
   function podWorld(i){ const v=new THREE.Vector3(); pods[i].getWorldPosition(v); return v; }
   function dockWorld(){ const v=new THREE.Vector3(0,dockY,0); return st.localToWorld(v); }
-  const size=Math.max(...layout.map(L=>L.r))+Math.max(Math.abs(minY),maxY);
-  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, size, capacity:pods.length };
+  const size=Math.max(trackR, ...layout.map(L=>L.r))+Math.max(Math.abs(minY)+(kart?4:0),maxY);
+  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, kart, size, capacity:pods.length };
 }
 
 function canvasTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; return t; }
@@ -278,4 +317,60 @@ export function buildCabin(look, accent){
     earth.rotation.y=t*0.03; floaters.forEach(([f,k])=>{ f.position.y+=Math.sin(t*0.9+k*2)*0.0015; f.rotation.x=t*(0.15+k*0.05); f.rotation.z=t*(0.1+k*0.07); }); };
   obj.setLook=function(l){ scene.remove(obj.astro); const a=makeAstronaut(l); a.scale.copy(obj.astro.scale); a.position.copy(obj.astro.position); a.rotation.copy(obj.astro.rotation); scene.add(a); obj.astro=a; };
   return obj;
+}
+
+// ---------- go-kart track (built from follower comments) ----------
+function stripeTex(a,b,n){ const c=document.createElement('canvas'); c.width=512; c.height=32; const x=c.getContext('2d');
+  for(let i=0;i<n;i++){ x.fillStyle=i%2?b:a; x.fillRect(i*512/n,0,512/n+1,32); } const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=THREE.RepeatWrapping; return t; }
+function asphaltTex(){ const c=document.createElement('canvas'); c.width=1024; c.height=64; const x=c.getContext('2d');
+  x.fillStyle='#2c3142'; x.fillRect(0,0,1024,64); for(let i=0;i<600;i++){ x.fillStyle=`rgba(255,255,255,${Math.random()*0.05})`; x.fillRect(Math.random()*1024,Math.random()*64,2,2); }
+  x.fillStyle='#e8ecf4'; for(let i=0;i<32;i++) x.fillRect(i*32+4,30,16,4); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=THREE.RepeatWrapping; return t; }
+function makeKart(color, suit){ const g=new THREE.Group();
+  const body=M(new THREE.BoxGeometry(0.9,0.22,0.55),color,0.08); body.position.y=0.22; g.add(body);
+  const nose=M(new THREE.BoxGeometry(0.3,0.16,0.5),color,0.08); nose.position.set(0.55,0.2,0); g.add(nose);
+  const seat=M(new THREE.BoxGeometry(0.28,0.3,0.4),'#2a2f40',0.08); seat.position.set(-0.18,0.42,0); g.add(seat);
+  const wing=M(new THREE.BoxGeometry(0.12,0.05,0.7),'#2a2f40',0.1); wing.position.set(-0.52,0.48,0); g.add(wing);
+  for(const [x,z] of [[0.33,0.32],[0.33,-0.32],[-0.33,0.34],[-0.33,-0.34]]){ const w=M(new THREE.CylinderGeometry(0.14,0.14,0.12,14),'#1b1e29',0.1); w.rotation.x=Math.PI/2; w.position.set(x,0.14,z); g.add(w); }
+  const torso=M(new THREE.CapsuleGeometry(0.13,0.12,4,10),suit,0.08); torso.position.set(-0.05,0.52,0); g.add(torso);
+  const helm=M(new THREE.SphereGeometry(0.15,14,10),'#f4f6fb',0.08); helm.position.set(0,0.75,0); g.add(helm);
+  const vis=new THREE.Mesh(new THREE.SphereGeometry(0.12,14,10,-Math.PI*0.5,Math.PI,Math.PI*0.3,Math.PI*0.4), new THREE.MeshPhongMaterial({color:'#1b2350',shininess:80,specular:new THREE.Color('#ffffff')}));
+  vis.rotation.y=Math.PI/2; vis.position.set(0.03,0.76,0); g.add(vis);
+  const tail=glow('rgba(255,80,80,1)',0.5); tail.position.set(-0.6,0.25,0); g.add(tail);
+  return g; }
+function buildKartTrack(st, minY, accent, accent2){
+  const y=minY-4.6, inner=8.0, outer=11.2, mid=(inner+outer)/2, T=new THREE.Group(); T.position.y=y; st.add(T);
+  // deck + surface
+  const deck=M(new THREE.CylinderGeometry(outer+0.5,outer+0.5,0.45,96,1,false),'#c9cfe3',0.03); deck.position.y=-0.3; T.add(deck);
+  const hole=new THREE.Mesh(new THREE.CylinderGeometry(inner-0.5,inner-0.5,0.5,64), new THREE.MeshToonMaterial({color:'#3a4058',gradientMap:GM})); hole.position.y=-0.28; T.add(hole);
+  const at=asphaltTex(); at.repeat.set(3,1);
+  const surf=new THREE.Mesh(new THREE.RingGeometry(inner,outer,128,1), new THREE.MeshToonMaterial({map:at,gradientMap:GM,side:THREE.DoubleSide}));
+  surf.rotation.x=-Math.PI/2; surf.position.y=-0.05; T.add(surf);
+  // ring UVs: map angle to u so the dashed line follows the track
+  { const pos=surf.geometry.attributes.position, uv=surf.geometry.attributes.uv; for(let i=0;i<pos.count;i++){ const x=pos.getX(i), z=pos.getY(i); const a=Math.atan2(z,x); const rr=Math.hypot(x,z); uv.setXY(i,(a/(Math.PI*2)+0.5), (rr-inner)/(outer-inner)); } uv.needsUpdate=true; }
+  // walls with red/white stripes
+  const st1=stripeTex('#ff4d6d','#ffffff',48); st1.repeat.set(6,1);
+  for(const [R,h] of [[outer,0.45],[inner,0.3]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(R,R,h,128,1,true), new THREE.MeshToonMaterial({map:st1,gradientMap:GM,side:THREE.DoubleSide})); w.position.y=h/2-0.05; T.add(w);
+    const rim=M(new THREE.TorusGeometry(R,0.05,6,128),'#0b0a1f',0); rim.rotation.x=Math.PI/2; rim.position.y=h-0.05; T.add(rim); }
+  // start/finish line + arch
+  const ck=document.createElement('canvas'); ck.width=128; ck.height=32; const cx=ck.getContext('2d'); for(let i=0;i<16;i++) for(let j=0;j<4;j++){ cx.fillStyle=(i+j)%2?'#111':'#fff'; cx.fillRect(i*8,j*8,8,8); }
+  const ckt=new THREE.CanvasTexture(ck); ckt.magFilter=THREE.NearestFilter;
+  const line=new THREE.Mesh(new THREE.PlaneGeometry(outer-inner,0.7), new THREE.MeshBasicMaterial({map:ckt})); line.rotation.x=-Math.PI/2; line.position.set(mid,0.0,0); T.add(line);
+  const arch=new THREE.Group(); arch.position.set(mid,0,0); T.add(arch);
+  for(const z of [-1,1]){ const post=M(new THREE.CylinderGeometry(0.1,0.1,2.4,8),'#c9cfe3',0.1); post.position.set(z*(outer-inner)/2+0.0,1.2,0); arch.add(post); }
+  const sc=document.createElement('canvas'); sc.width=512; sc.height=128; const sx=sc.getContext('2d'); sx.fillStyle='#0b0a1f'; sx.fillRect(0,0,512,128);
+  sx.strokeStyle=accent; sx.lineWidth=10; sx.strokeRect(6,6,500,116); sx.font='900 70px "Inter Display", Inter, sans-serif'; sx.textAlign='center'; sx.textBaseline='middle'; sx.fillStyle='#ffffff'; sx.fillText('🏁 ORBIT GP 🏁',256,68);
+  const stx=new THREE.CanvasTexture(sc); stx.colorSpace=THREE.SRGBColorSpace;
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(outer-inner+0.4,0.75,0.12), [toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),new THREE.MeshBasicMaterial({map:stx}),new THREE.MeshBasicMaterial({map:stx})]);
+  sign.position.y=2.45; arch.add(sign);
+  // support pylon + spokes
+  const py=M(new THREE.CylinderGeometry(0.7,0.9,Math.abs(y)-Math.abs(minY)+2,16),'#dfe3f0',0.04); py.position.y=(Math.abs(y)-Math.abs(minY)+2)/2-0.3; T.add(py);
+  for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; const sp=M(new THREE.CylinderGeometry(0.16,0.16,inner-0.8,8),'#c9cfe3',0.1); sp.rotation.z=Math.PI/2; sp.rotation.y=a; sp.position.set(Math.cos(a)*(inner)/2,-0.25,-Math.sin(a)*(inner)/2); T.add(sp); }
+  // floodlights
+  for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+0.3; const pole=M(new THREE.CylinderGeometry(0.06,0.06,1.8,6),'#9aa3b5',0.1); pole.position.set(Math.cos(a)*(outer+0.3),0.9,Math.sin(a)*(outer+0.3)); T.add(pole);
+    const l=glow('rgba(255,240,200,1)',1.6); l.position.set(Math.cos(a)*(outer+0.3),1.85,Math.sin(a)*(outer+0.3)); T.add(l); }
+  // karts
+  const cols=[accent,accent2,'#ffd166','#6fb6ff','#8ef08a','#ff8a3d','#b39cff'];
+  const karts=cols.map((c,i)=>{ const k=makeKart(c,SUITS[(i*3+1)%SUITS.length]); T.add(k); return {k,off:i/cols.length*Math.PI*2+(i%2)*0.2,sp:0.55+((i*37)%10)/40,lane:inner+0.7+((i*5)%3)*0.85}; });
+  function update(t){ karts.forEach((o,i)=>{ const a=o.off+t*o.sp; const lane=o.lane+Math.sin(t*0.9+i)*0.35; o.k.position.set(Math.cos(a)*lane,0.02+Math.abs(Math.sin(t*12+i))*0.02,-Math.sin(a)*lane); o.k.rotation.y=a+Math.PI/2+Math.cos(t*0.9+i)*0.08; }); }
+  return { group:T, update, y, outer, karts };
 }
