@@ -52,6 +52,8 @@
  },
  "startDate": "2026-11-01",
  "features": [
-  "gokart"
- ]
+  "gokart",
+  "ranchpool"
+ ],
+ "poolCredit": "t3gere"
 }

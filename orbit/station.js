@@ -192,7 +192,9 @@ export function buildStation(cfg){
   if(maxY-minY>0){ const spine=M(new THREE.CylinderGeometry(1.2,1.2,maxY-minY+2,24),'#dfe3f0'); spine.position.y=(maxY+minY)/2; st.add(spine); }
   // ---- go-kart track under the station ----
   let kart=null, trackR=0;
-  if((cfg.features||[]).includes('gokart')){ kart=buildKartTrack(st, minY, accent, accent2); trackR=kart.outer; }
+  if((cfg.features||[]).includes('gokart')){ kart=buildKartTrack(st, minY, accent, accent2, {pool:(cfg.features||[]).includes('ranchpool')}); trackR=kart.outer; }
+  let pool=null;
+  if((cfg.features||[]).includes('ranchpool') && kart){ pool=buildRanchPool(kart.group, accent, accent2, cfg.poolCredit||''); }
   const topY=Math.max(4.3, maxY+1.6); port.position.y=topY; portR.position.y=topY+0.45; const dockY=topY+0.5;
   const WIN_ON=new THREE.Color('#ffd166'), WIN_OFF=new THREE.Color('#2a2f4a');
   function setOccupied(n){ pods.forEach((p,i)=>{ const on=typeof n==='function'?n(i):i<n; const I=inst[p.userData.ring];
@@ -218,11 +220,12 @@ export function buildStation(cfg){
     blinkA.material.opacity=((t*1.4)%1)<0.5?1:0.15; blinkB.material.opacity=((t*1.4+0.5)%1)<0.5?1:0.15;
     st.position.y=Math.sin(t*0.7)*0.15;
     beacons.forEach((b,i)=>b.material.opacity=((t*0.9+i*0.25)%1)<0.3?1:0.15);
-    if(kart) kart.update(t); }
+    if(kart) kart.update(t);
+    if(pool) pool.update(t); }
   function podWorld(i){ const v=new THREE.Vector3(); pods[i].getWorldPosition(v); return v; }
   function dockWorld(){ const v=new THREE.Vector3(0,dockY,0); return st.localToWorld(v); }
   const size=Math.max(trackR, ...layout.map(L=>L.r))+Math.max(Math.abs(minY)+(kart?4:0),maxY);
-  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, kart, size, capacity:pods.length };
+  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, kart, pool, size, capacity:pods.length };
 }
 
 function canvasTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; return t; }
@@ -337,7 +340,7 @@ function makeKart(color, suit){ const g=new THREE.Group();
   vis.rotation.y=Math.PI/2; vis.position.set(0.03,0.76,0); g.add(vis);
   const tail=glow('rgba(255,80,80,1)',0.5); tail.position.set(-0.6,0.25,0); g.add(tail);
   return g; }
-function buildKartTrack(st, minY, accent, accent2){
+function buildKartTrack(st, minY, accent, accent2, opts={}){
   const y=minY-4.6, inner=8.0, outer=11.2, mid=(inner+outer)/2, T=new THREE.Group(); T.position.y=y; st.add(T);
   // deck + surface
   const deck=M(new THREE.CylinderGeometry(outer+0.5,outer+0.5,0.45,96,1,false),'#c9cfe3',0.03); deck.position.y=-0.3; T.add(deck);
@@ -363,8 +366,12 @@ function buildKartTrack(st, minY, accent, accent2){
   const sign=new THREE.Mesh(new THREE.BoxGeometry(outer-inner+0.4,0.75,0.12), [toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),new THREE.MeshBasicMaterial({map:stx}),new THREE.MeshBasicMaterial({map:stx})]);
   sign.position.y=2.45; arch.add(sign);
   // support pylon + spokes
-  const py=M(new THREE.CylinderGeometry(0.7,0.9,Math.abs(y)-Math.abs(minY)+2,16),'#dfe3f0',0.04); py.position.y=(Math.abs(y)-Math.abs(minY)+2)/2-0.3; T.add(py);
-  for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; const sp=M(new THREE.CylinderGeometry(0.16,0.16,inner-0.8,8),'#c9cfe3',0.1); sp.rotation.z=Math.PI/2; sp.rotation.y=a; sp.position.set(Math.cos(a)*(inner)/2,-0.25,-Math.sin(a)*(inner)/2); T.add(sp); }
+  if(!opts.pool){ const py=M(new THREE.CylinderGeometry(0.7,0.9,Math.abs(y)-Math.abs(minY)+2,16),'#dfe3f0',0.04); py.position.y=(Math.abs(y)-Math.abs(minY)+2)/2-0.3; T.add(py);
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; const sp=M(new THREE.CylinderGeometry(0.16,0.16,inner-0.8,8),'#c9cfe3',0.1); sp.rotation.z=Math.PI/2; sp.rotation.y=a; sp.position.set(Math.cos(a)*(inner)/2,-0.25,-Math.sin(a)*(inner)/2); T.add(sp); } }
+  else { // support cables from the station down to the inner wall
+    const top=new THREE.Vector3(0,Math.abs(y)-Math.abs(minY)-0.2,0);
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2+0.5; const bot=new THREE.Vector3(Math.cos(a)*(inner-0.2),0.3,-Math.sin(a)*(inner-0.2)); const tp=new THREE.Vector3(Math.cos(a)*1.4,top.y,-Math.sin(a)*1.4);
+      const len=bot.distanceTo(tp); const c=M(new THREE.CylinderGeometry(0.06,0.06,len,6),'#c9cfe3',0.15); c.position.copy(bot.clone().add(tp).multiplyScalar(0.5)); c.lookAt(tp); c.rotateX(Math.PI/2); T.add(c); } }
   // floodlights
   for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+0.3; const pole=M(new THREE.CylinderGeometry(0.06,0.06,1.8,6),'#9aa3b5',0.1); pole.position.set(Math.cos(a)*(outer+0.3),0.9,Math.sin(a)*(outer+0.3)); T.add(pole);
     const l=glow('rgba(255,240,200,1)',1.6); l.position.set(Math.cos(a)*(outer+0.3),1.85,Math.sin(a)*(outer+0.3)); T.add(l); }
@@ -373,4 +380,59 @@ function buildKartTrack(st, minY, accent, accent2){
   const karts=cols.map((c,i)=>{ const k=makeKart(c,SUITS[(i*3+1)%SUITS.length]); T.add(k); return {k,off:i/cols.length*Math.PI*2+(i%2)*0.2,sp:0.55+((i*37)%10)/40,lane:inner+0.7+((i*5)%3)*0.85}; });
   function update(t){ karts.forEach((o,i)=>{ const a=o.off+t*o.sp; const lane=o.lane+Math.sin(t*0.9+i)*0.35; o.k.position.set(Math.cos(a)*lane,0.02+Math.abs(Math.sin(t*12+i))*0.02,-Math.sin(a)*lane); o.k.rotation.y=a+Math.PI/2+Math.cos(t*0.9+i)*0.08; }); }
   return { group:T, update, y, outer, karts };
+}
+
+// ---------- Olympic pool full of ranch (built from follower comments) ----------
+function ranchTex(){ return canvasTex(512,256,(x,w,h)=>{ x.fillStyle='#f4f0de'; x.fillRect(0,0,w,h);
+  for(let i=0;i<60;i++){ x.fillStyle=`rgba(235,226,196,${0.5+Math.random()*0.5})`; x.beginPath(); x.ellipse(Math.random()*w,Math.random()*h,10+Math.random()*30,4+Math.random()*10,Math.random()*3,0,7); x.fill(); }
+  for(let i=0;i<260;i++){ x.fillStyle=['#5aa04a','#3f7f35','#7cbf55'][i%3]; x.save(); x.translate(Math.random()*w,Math.random()*h); x.rotate(Math.random()*3); x.fillRect(-3,-1.2,6,2.4); x.restore(); }
+  for(let i=0;i<60;i++){ x.fillStyle='rgba(40,40,30,0.55)'; x.beginPath(); x.arc(Math.random()*w,Math.random()*h,1.3,0,7); x.fill(); } }); }
+function tileTex(){ return canvasTex(256,256,(x,w,h)=>{ x.fillStyle='#e9f2f8'; x.fillRect(0,0,w,h); x.strokeStyle='#b8cbd8'; x.lineWidth=3; for(let i=0;i<=8;i++){ x.beginPath(); x.moveTo(i*32,0); x.lineTo(i*32,h); x.stroke(); x.beginPath(); x.moveTo(0,i*32); x.lineTo(w,i*32); x.stroke(); } }); }
+function buildRanchPool(T, accent, accent2, credit){
+  const P=new THREE.Group(); P.position.y=0.02; T.add(P);
+  const L=10.4, Wd=5.0;
+  const tt=tileTex(); tt.wrapS=tt.wrapT=THREE.RepeatWrapping; tt.repeat.set(4,2);
+  const deck=new THREE.Mesh(new THREE.BoxGeometry(L+2.0,0.3,Wd+2.0), [toon('#d9e6ee'),toon('#d9e6ee'),new THREE.MeshToonMaterial({map:tt,gradientMap:GM}),toon('#d9e6ee'),toon('#d9e6ee'),toon('#d9e6ee')]); deck.position.y=0.05; P.add(deck);
+  for(const [sx,sz,px,pz] of [[L+0.5,0.25,0,Wd/2+0.12],[L+0.5,0.25,0,-Wd/2-0.12],[0.25,Wd,L/2+0.12,0],[0.25,Wd,-L/2-0.12,0]]){ const b=M(new THREE.BoxGeometry(sx,0.22,sz),'#ffffff',0.06); b.position.set(px,0.3,pz); P.add(b); }
+  const rt=ranchTex(); rt.wrapS=rt.wrapT=THREE.RepeatWrapping; rt.repeat.set(3,1.5);
+  const sg=new THREE.PlaneGeometry(L,Wd,40,20); const surf=new THREE.Mesh(sg,new THREE.MeshToonMaterial({map:rt,gradientMap:GM})); surf.rotation.x=-Math.PI/2; surf.position.y=0.26; P.add(surf);
+  const base=sg.attributes.position.array.slice();
+  for(let k=1;k<6;k++){ const z=-Wd/2+k*Wd/6; for(let i=0;i<26;i++){ const f=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,6), new THREE.MeshBasicMaterial({color:i%2?'#ff4d6d':'#ffffff'})); f.position.set(-L/2+0.2+i*(L-0.4)/25,0.31,z); P.add(f); } }
+  for(let k=0;k<6;k++){ const z=-Wd/2+(k+0.5)*Wd/6; const bl=M(new THREE.BoxGeometry(0.35,0.3,0.45),k%2?accent:accent2,0.08); bl.position.set(-L/2-0.45,0.4,z); P.add(bl); }
+  const board=M(new THREE.BoxGeometry(1.6,0.08,0.45),'#3a7bff',0.08); board.position.set(L/2+0.2,0.75,Wd/2-0.6); P.add(board);
+  const boardBase=M(new THREE.BoxGeometry(0.4,0.55,0.4),'#c9cfe3',0.08); boardBase.position.set(L/2+0.85,0.45,Wd/2-0.6); P.add(boardBase);
+  const bottle=new THREE.Group(); bottle.position.set(L/2+0.7,2.3,-Wd/2+0.7); bottle.rotation.z=2.2; P.add(bottle);
+  bottle.add(M(new THREE.CylinderGeometry(0.62,0.62,2.0,24),'#fbfaf3',0.05));
+  const sh=M(new THREE.CylinderGeometry(0.3,0.62,0.55,24),'#fbfaf3',0.05); sh.position.y=1.27; bottle.add(sh);
+  const capM=M(new THREE.CylinderGeometry(0.31,0.31,0.3,16),'#3fae5a',0.08); capM.position.y=1.68; bottle.add(capM);
+  const lab=canvasTex(512,256,(x,w,h)=>{ x.fillStyle='#3fae5a'; x.fillRect(0,0,w,h); x.fillStyle='#ffffff'; x.fillRect(0,30,w,196); x.fillStyle='#2f7d42'; x.font='900 120px "Inter Display", Inter, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('RANCH',w/2,130); });
+  const label=new THREE.Mesh(new THREE.CylinderGeometry(0.635,0.635,1.1,24,1,true), new THREE.MeshBasicMaterial({map:lab})); bottle.add(label);
+  const stream=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,1.0,12), toon('#f4f0de')); P.add(stream);
+  const swim=[]; for(let i=0;i<4;i++){ const a=makeAstronaut({suit:SUITS[(i*2+3)%SUITS.length],visor:VISORS[(i+1)%VISORS.length]}); a.scale.setScalar(0.38); a.position.set(-3.5+i*2.3,0.25,-1.2+(i%2)*2.0); a.rotation.x=-0.9; P.add(a); swim.push(a); }
+  const tube=M(new THREE.TorusGeometry(0.42,0.17,10,20),accent,0.08); tube.rotation.x=Math.PI/2; tube.position.set(2.2,0.32,1.2); P.add(tube);
+  const chair=new THREE.Group(); chair.position.set(-L/2+1.2,0.2,Wd/2+0.75); P.add(chair);
+  for(const [x,z] of [[-0.25,-0.2],[0.25,-0.2],[-0.25,0.2],[0.25,0.2]]){ const l=M(new THREE.CylinderGeometry(0.04,0.04,1.4,6),'#ffffff',0.12); l.position.set(x,0.7,z); chair.add(l); }
+  const seat=M(new THREE.BoxGeometry(0.6,0.08,0.5),'#ff4d6d',0.08); seat.position.y=1.42; chair.add(seat);
+  const umb=new THREE.Group(); umb.position.set(L/2-1.5,0.2,Wd/2+0.75); P.add(umb);
+  const ump=M(new THREE.CylinderGeometry(0.04,0.04,1.8,6),'#ffffff',0.12); ump.position.y=0.9; umb.add(ump);
+  const canopy=M(new THREE.ConeGeometry(0.95,0.45,8,1,true),accent2,0.06,{side:THREE.DoubleSide}); canopy.position.y=1.9; umb.add(canopy);
+  const sgn=canvasTex(1024,256,(x,w,h)=>{ x.fillStyle='#0b0a1f'; x.fillRect(0,0,w,h); x.strokeStyle='#3fae5a'; x.lineWidth=16; x.strokeRect(8,8,w-16,h-16);
+    x.font='900 110px "Inter Display", Inter, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillStyle='#ffffff'; x.fillText('RANCH POOL',w/2,105);
+    x.font='700 52px "Inter Display", Inter, sans-serif'; x.fillStyle='#8ee0a8'; x.fillText(credit?('Olympic size · idea: @'+credit):'Olympic size',w/2,190); });
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(3.6,0.9,0.1), [toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),new THREE.MeshBasicMaterial({map:sgn}),new THREE.MeshBasicMaterial({map:sgn})]);
+  sign.position.set(0,1.7,-Wd/2-0.9); P.add(sign);
+  for(const x of [-1.6,1.6]){ const post=M(new THREE.CylinderGeometry(0.05,0.05,1.3,6),'#c9cfe3',0.12); post.position.set(x,0.85,-Wd/2-0.9); P.add(post); }
+  for(let i=0;i<6;i++){ const g=glow('rgba(160,255,190,0.9)',1.1); g.position.set(-L/2+1+i*(L-2)/5,0.45,(i%2?1:-1)*(Wd/2+0.25)); P.add(g); }
+  const mouth=new THREE.Vector3(), end=new THREE.Vector3(), wp=new THREE.Vector3();
+  function update(t){
+    const pa=sg.attributes.position; for(let i=0;i<pa.count;i++){ const x=base[i*3], y=base[i*3+1]; pa.array[i*3+2]=Math.sin(x*1.3+t*1.6)*0.04+Math.cos(y*1.7+t*1.2)*0.03; } pa.needsUpdate=true;
+    rt.offset.x=t*0.01; rt.offset.y=Math.sin(t*0.2)*0.02;
+    bottle.rotation.z=2.2+Math.sin(t*0.9)*0.04; bottle.updateMatrixWorld(true);
+    mouth.set(0,1.85,0); bottle.localToWorld(mouth); P.worldToLocal(mouth); end.set(mouth.x-0.25,0.28,mouth.z);
+    stream.position.copy(mouth).add(end).multiplyScalar(0.5); stream.scale.set(1,Math.max(0.2,mouth.distanceTo(end)),1);
+    wp.copy(end); P.localToWorld(wp); stream.lookAt(wp); stream.rotateX(Math.PI/2);
+    swim.forEach((a,i)=>{ a.position.y=0.25+Math.sin(t*1.5+i)*0.05; a.rotation.z=Math.sin(t*0.8+i)*0.3; a.position.x=-3.5+i*2.3+Math.sin(t*0.4+i)*0.4; if(a.userData.animate) a.userData.animate(t*1.4+i,i===1); });
+    tube.position.y=0.32+Math.sin(t*1.3)*0.04; tube.rotation.z=t*0.2;
+  }
+  return { group:P, update };
 }
