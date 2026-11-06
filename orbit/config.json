@@ -53,7 +53,9 @@
  "startDate": "2026-11-01",
  "features": [
   "gokart",
-  "ranchpool"
+  "ranchpool",
+  "nuggethand"
  ],
- "poolCredit": "t3gere"
+ "poolCredit": "t3gere",
+ "handCredit": "mcmahanbenson"
 }

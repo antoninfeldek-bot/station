@@ -195,6 +195,8 @@ export function buildStation(cfg){
   if((cfg.features||[]).includes('gokart')){ kart=buildKartTrack(st, minY, accent, accent2, {pool:(cfg.features||[]).includes('ranchpool')}); trackR=kart.outer; }
   let pool=null;
   if((cfg.features||[]).includes('ranchpool') && kart){ pool=buildRanchPool(kart.group, accent, accent2, cfg.poolCredit||''); }
+  let nug=null;
+  if((cfg.features||[]).includes('nuggethand') && pool){ nug=buildNuggetHand(pool.group, cfg.handCredit||''); }
   const topY=Math.max(4.3, maxY+1.6); port.position.y=topY; portR.position.y=topY+0.45; const dockY=topY+0.5;
   const WIN_ON=new THREE.Color('#ffd166'), WIN_OFF=new THREE.Color('#2a2f4a');
   function setOccupied(n){ pods.forEach((p,i)=>{ const on=typeof n==='function'?n(i):i<n; const I=inst[p.userData.ring];
@@ -221,11 +223,12 @@ export function buildStation(cfg){
     st.position.y=Math.sin(t*0.7)*0.15;
     beacons.forEach((b,i)=>b.material.opacity=((t*0.9+i*0.25)%1)<0.3?1:0.15);
     if(kart) kart.update(t);
-    if(pool) pool.update(t); }
+    if(pool) pool.update(t);
+    if(nug) nug.update(t); }
   function podWorld(i){ const v=new THREE.Vector3(); pods[i].getWorldPosition(v); return v; }
   function dockWorld(){ const v=new THREE.Vector3(0,dockY,0); return st.localToWorld(v); }
   const size=Math.max(trackR, ...layout.map(L=>L.r))+Math.max(Math.abs(minY)+(kart?4:0),maxY);
-  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, kart, pool, size, capacity:pods.length };
+  return { THREE, scene, camera, update, pods, podWorld, dockWorld, rocket, crew, station:st, earth, setOccupied, setSelected, selGlow, kart, pool, nug, size, capacity:pods.length };
 }
 
 function canvasTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; return t; }
@@ -435,4 +438,59 @@ function buildRanchPool(T, accent, accent2, credit){
     tube.position.y=0.32+Math.sin(t*1.3)*0.04; tube.rotation.z=t*0.2;
   }
   return { group:P, update };
+}
+
+// ---------- giant hand dipping chicken nuggets into the ranch pool (follower idea) ----------
+function nuggetMesh(r){ const g=new THREE.IcosahedronGeometry(r,2); const p=g.attributes.position;
+  for(let i=0;i<p.count;i++){ const v=new THREE.Vector3(p.getX(i),p.getY(i),p.getZ(i)); const n=1+0.18*Math.sin(v.x*9.1+v.y*4.3)+0.12*Math.cos(v.z*11.7-v.x*3.1); v.multiplyScalar(n); p.setXYZ(i,v.x*1.25,v.y*0.8,v.z); }
+  g.computeVertexNormals(); return M(g,'#d99a3c',0.06); }
+function buildNuggetHand(P, credit){
+  const G=new THREE.Group(); P.add(G);
+  const L=10.4, Wd=5.0, px=1.2, pz=Wd/2+1.5;
+  // pedestal + arm
+  const ped=M(new THREE.CylinderGeometry(0.45,0.65,4.4,16),'#c9cfe3',0.05); ped.position.set(px,2.2,pz); G.add(ped);
+  const cap=M(new THREE.SphereGeometry(0.6,16,12),'#9aa3b5',0.06); cap.position.set(px,4.45,pz); G.add(cap);
+  const arm=M(new THREE.CylinderGeometry(0.42,0.48,1,14),'#f4f6fb',0.05); G.add(arm);
+  const stripe=M(new THREE.CylinderGeometry(0.5,0.5,0.3,14),'#ffd166',0.05); G.add(stripe);
+  // hand (pointing down, pinching a nugget)
+  const H=new THREE.Group(); H.scale.setScalar(1.7); G.add(H);
+  const cuff=M(new THREE.CylinderGeometry(0.42,0.42,0.35,16),'#f4f6fb',0.05); cuff.position.y=0.45; H.add(cuff);
+  const palm=M(new THREE.SphereGeometry(0.5,18,14),'#f2c19b',0.05); palm.scale.set(1,0.9,0.55); H.add(palm);
+  const fingers=[];
+  for(let i=0;i<4;i++){ const f=new THREE.Group(); f.position.set(-0.3+i*0.2,-0.35,0.08); H.add(f);
+    const seg1=M(new THREE.CapsuleGeometry(0.1,0.32,4,10),'#f2c19b',0.08); seg1.position.y=-0.22; f.add(seg1);
+    const k=new THREE.Group(); k.position.y=-0.44; f.add(k); const seg2=M(new THREE.CapsuleGeometry(0.09,0.22,4,10),'#f2c19b',0.08); seg2.position.y=-0.16; k.add(seg2);
+    f.rotation.x=0.25; k.rotation.x=0.55; fingers.push({f,k}); }
+  const th=new THREE.Group(); th.position.set(0.42,-0.15,0.18); H.add(th); const ts=M(new THREE.CapsuleGeometry(0.11,0.34,4,10),'#f2c19b',0.08); ts.position.y=-0.25; th.add(ts); th.rotation.set(0.6,0,0.7);
+  const nug=new THREE.Group(); nug.position.set(0,-1.05,0.32); H.add(nug); nug.add(nuggetMesh(0.38));
+  const coat=new THREE.Mesh(new THREE.SphereGeometry(0.44,14,10,0,Math.PI*2,Math.PI*0.55,Math.PI*0.45), toon('#f4f0de')); coat.scale.set(1.2,0.85,1); nug.add(coat); coat.visible=false;
+  const drip=M(new THREE.SphereGeometry(0.07,8,6),'#f4f0de',0.02); nug.add(drip); drip.visible=false;
+  // splash ring on the ranch
+  const splash=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.06,6,24), new THREE.MeshBasicMaterial({color:'#fffbea',transparent:true,opacity:0})); splash.rotation.x=Math.PI/2; G.add(splash);
+  // nugget box
+  const box=new THREE.Group(); box.position.set(px+1.3,0.2,pz-0.1); G.add(box);
+  const bx=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.75,0.7), [toon('#e23b3b'),toon('#e23b3b'),toon('#c92f2f'),toon('#e23b3b'),new THREE.MeshBasicMaterial({map:canvasTex(256,256,(x,w,h)=>{ x.fillStyle='#e23b3b'; x.fillRect(0,0,w,h); x.fillStyle='#ffd166'; x.font='900 74px "Inter Display", Inter, sans-serif'; x.textAlign='center'; x.fillText('NUGS',w/2,150); })}),toon('#e23b3b')]);
+  bx.position.y=0.38; box.add(bx); for(let i=0;i<5;i++){ const n=nuggetMesh(0.17); n.position.set(-0.25+(i%3)*0.25,0.82+(i>2?0.1:0),-0.1+(i%2)*0.18); n.rotation.set(i,i*2,0); box.add(n); }
+  // credit sign
+  const sg=canvasTex(1024,256,(x,w,h)=>{ x.fillStyle='#0b0a1f'; x.fillRect(0,0,w,h); x.strokeStyle='#ffd166'; x.lineWidth=16; x.strokeRect(8,8,w-16,h-16);
+    x.font='900 100px "Inter Display", Inter, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillStyle='#ffffff'; x.fillText('NUGGET HAND',w/2,100);
+    x.font='700 50px "Inter Display", Inter, sans-serif'; x.fillStyle='#ffd166'; x.fillText(credit?('idea: @'+credit):'dip responsibly',w/2,190); });
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(3.0,0.75,0.1),[toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),toon('#0b0a1f'),new THREE.MeshBasicMaterial({map:sg}),new THREE.MeshBasicMaterial({map:sg})]);
+  sign.position.set(px-2.3,1.35,pz+0.2); G.add(sign); for(const x of [-1.3,1.3]){ const po=M(new THREE.CylinderGeometry(0.05,0.05,1.1,6),'#c9cfe3',0.12); po.position.set(px-2.3+x,0.75,pz+0.2); G.add(po); }
+  const top=new THREE.Vector3(px,4.45,pz), wrist=new THREE.Vector3(), mid=new THREE.Vector3(), tmp=new THREE.Vector3();
+  const surfY=0.28, dipX=px-0.6, dipZ=Wd/2-1.3;
+  function update(t){
+    const per=4.0, c=t%per; let d;
+    if(c<1.1) d=Math.sin(c/1.1*Math.PI/2)**2; else if(c<1.7) d=1; else if(c<2.9) d=1-Math.sin((c-1.7)/1.2*Math.PI/2)**2; else d=0;
+    const handY=surfY+2.25+(1-d)*1.7;
+    H.position.set(dipX+Math.sin(t*0.7)*0.15, handY, dipZ); H.rotation.z=Math.sin(t*1.3)*0.05;
+    wrist.set(H.position.x,H.position.y+0.62*1.7,H.position.z);
+    mid.copy(top).add(wrist).multiplyScalar(0.5); arm.position.copy(mid); arm.scale.set(1,top.distanceTo(wrist),1);
+    tmp.copy(wrist); G.localToWorld(tmp); arm.lookAt(tmp); arm.rotateX(Math.PI/2);
+    stripe.position.copy(top).lerp(wrist,0.5); stripe.quaternion.copy(arm.quaternion);
+    fingers.forEach((o,i)=>{ o.f.rotation.x=0.25+0.05*Math.sin(t*2+i); });
+    const dipped=t>1.0; coat.visible=dipped; drip.visible=dipped && c>1.7 && c<3.6; drip.position.set(0,-0.42-((c-1.7)%0.9)*1.2,0);
+    const sp=(c-1.0); if(sp>0&&sp<0.9){ splash.position.set(dipX,surfY+0.04,dipZ+0.32*1.7); const k=sp/0.9; splash.scale.setScalar(0.6+2.2*k); splash.material.opacity=0.85*(1-k); } else splash.material.opacity=0;
+  }
+  return { group:G, update, hand:H };
 }
